@@ -15,7 +15,7 @@ class CodeDetection():
     def load_model(self):
         model = torch.hub.load('ultralytics/yolov5',
                                'custom',
-                               path='yolov5/runs/train/exp/weights/datamatrix-best.pt',
+                               path='datamatrix-best.pt',
                                )
         return model
 
@@ -43,7 +43,7 @@ class CodeDetection():
         pass
 
     def __call__(self):
-        cap = cv2.VideoCapture(0)
+        cap = cv2.VideoCapture(1)
 
         while cap.isOpened():
             start_time = time.perf_counter()
