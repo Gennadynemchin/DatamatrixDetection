@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import time
 from pylibdmtx.pylibdmtx import decode
+from PIL import Image
 
 
 class CodeDetection():
@@ -36,14 +37,14 @@ class CodeDetection():
                 x1, y1, x2, y2 = int(row[0] * x_shape), int(row[1] * y_shape), int(row[2] * x_shape), int(
                     row[3] * y_shape)
                 bgr = (0, 255, 0)
-                cv2.rectangle(frame, (x1, y1), (x2, y2), bgr, 2)
+                cv2.rectangle(frame, (x1-10, y1-10), (x2+10, y2+10), bgr, 2)
         return frame
 
     def decode_dmx(self, frame):
         pass
 
     def __call__(self):
-        cap = cv2.VideoCapture(1)
+        cap = cv2.VideoCapture(0)
 
         while cap.isOpened():
             start_time = time.perf_counter()
@@ -57,9 +58,35 @@ class CodeDetection():
             cv2.putText(frame, f'FPS: {int(fps)}', (20, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 2)
             cv2.imshow("img", frame)
             key = cv2.waitKey(1)
+            timeout = 3000
             if key == ord("p"):
-                cv2.waitKey(3000)
-                print(decode(frame, timeout=2800))
+                cv2.waitKey(timeout)
+                height, width, channels = frame.shape
+
+                offset_x = 0
+                offset_y = 0
+                print('****START****')
+                for result in results[1]:
+                    x_min = int(result[0].numpy() * width)
+                    y_min = int(result[1].numpy() * height)
+                    x_max = int(result[2].numpy() * width)
+                    y_max = int(result[3].numpy() * height)
+
+                    x_min += offset_x
+                    y_min += offset_y
+                    x_max += offset_x
+                    y_max += offset_y
+
+                    # Crop the object from the original image
+                    cropped_object = frame[y_min:y_max, x_min:x_max, :]
+
+                    decoded = decode(cropped_object, timeout=timeout, min_edge=30, corrections=2)
+
+                    print(decoded)
+
+                    # cropped_image = Image.fromarray(cropped_object)
+                    # cropped_image.save(f'cropped_image.jpg')
+                print('****STOP****')
             elif key & 0xFF == ord('q'):
                 break
 
