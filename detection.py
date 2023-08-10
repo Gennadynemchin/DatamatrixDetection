@@ -40,64 +40,58 @@ class CodeDetection():
                 cv2.rectangle(frame, (x1-10, y1-10), (x2+10, y2+10), bgr, 2)
         return frame
 
-    def decode_dmx(self, frame):
-        pass
-
     def __call__(self):
-        cap = cv2.VideoCapture(0)
+        stream = cv2.VideoCapture(0)
+        timeout = 3000
+        timeout_per_code = 200
+        offset_x = 10
+        offset_y = 10
 
-        while cap.isOpened():
+        while stream.isOpened():
             start_time = time.perf_counter()
-            ret, frame = cap.read()
+            ret, frame = stream.read()
             if not ret:
                 break
             results = self.score_frame(frame)
             frame = self.plot_boxes(results, frame)
             end_time = time.perf_counter()
             fps = 1 / np.round(end_time - start_time, 3)
-            cv2.putText(frame, f'FPS: {int(fps)}', (20, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 2)
+            cv2.putText(frame, f'FPS: {int(fps)}', (20, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
             cv2.imshow("img", frame)
             key = cv2.waitKey(1)
-            timeout = 3000
             if key == ord("p"):
                 codes = []
                 cv2.waitKey(timeout)
                 height, width, channels = frame.shape
 
-                offset_x = 0
-                offset_y = 0
-                for result in results[1]:
-                    x_min = int(result[0].numpy() * width)
-                    y_min = int(result[1].numpy() * height)
-                    x_max = int(result[2].numpy() * width)
-                    y_max = int(result[3].numpy() * height)
-
-                    x_min += offset_x
-                    y_min += offset_y
-                    x_max += offset_x
-                    y_max += offset_y
+                for count, result in enumerate(results[1]):
+                    x_min = int(result[0].numpy() * width) - offset_x
+                    y_min = int(result[1].numpy() * height) - offset_y
+                    x_max = int(result[2].numpy() * width) + offset_x
+                    y_max = int(result[3].numpy() * height) + offset_y
 
                     # Crop the object from the original image
                     cropped_object = frame[y_min:y_max, x_min:x_max, :]
-                    decoded = decode(cropped_object,
-                                     timeout=timeout,
-                                     min_edge=20,
-                                     corrections=3,
-                                     threshold=35,
-                                     shape=DmtxSymbolSize.DmtxSymbol36x36,
-                                     max_count=1
-                                     )
-                    codes.append(decoded)
+                    try:
+                        decoded_code = decode(cropped_object,
+                                              timeout=timeout_per_code,
+                                              min_edge=40,
+                                              corrections=2,
+                                              shape=DmtxSymbolSize.DmtxSymbol36x36,
+                                              max_count=1
+                                              )
+                    except ZeroDivisionError:
+                        continue
+                    cropped_image = Image.fromarray(cropped_object)
+                    cropped_image.save(f'media/cropped_image_{count}.jpg')
+
+                    codes.append(decoded_code)
                 offset_text = 0
                 for itr, code in enumerate(codes):
-                    offset_text += int(height / len(codes)) - 10
-                    cv2.putText(frame, str(code), (20, offset_text), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3)
-
+                    offset_text += int(height / len(codes)) - 5
+                    cv2.putText(frame, str(code), (20, offset_text), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                 cv2.imshow("img", frame)
                 cv2.waitKey(timeout)
-                    # cropped_image = Image.fromarray(cropped_object)
-                    # cropped_image.save(f'cropped_image.jpg')
-
             elif key & 0xFF == ord('q'):
                 break
 
