@@ -2,7 +2,7 @@ import torch
 import cv2
 import numpy as np
 import time
-from pylibdmtx.pylibdmtx import decode
+from pylibdmtx.pylibdmtx import decode, DmtxSymbolSize
 from PIL import Image
 
 
@@ -60,12 +60,12 @@ class CodeDetection():
             key = cv2.waitKey(1)
             timeout = 3000
             if key == ord("p"):
+                codes = []
                 cv2.waitKey(timeout)
                 height, width, channels = frame.shape
 
                 offset_x = 0
                 offset_y = 0
-                print('****START****')
                 for result in results[1]:
                     x_min = int(result[0].numpy() * width)
                     y_min = int(result[1].numpy() * height)
@@ -79,14 +79,25 @@ class CodeDetection():
 
                     # Crop the object from the original image
                     cropped_object = frame[y_min:y_max, x_min:x_max, :]
+                    decoded = decode(cropped_object,
+                                     timeout=timeout,
+                                     min_edge=20,
+                                     corrections=3,
+                                     threshold=35,
+                                     shape=DmtxSymbolSize.DmtxSymbol36x36,
+                                     max_count=1
+                                     )
+                    codes.append(decoded)
+                offset_text = 0
+                for itr, code in enumerate(codes):
+                    offset_text += int(height / len(codes)) - 10
+                    cv2.putText(frame, str(code), (20, offset_text), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3)
 
-                    decoded = decode(cropped_object, timeout=timeout, min_edge=30, corrections=2)
-
-                    print(decoded)
-
+                cv2.imshow("img", frame)
+                cv2.waitKey(timeout)
                     # cropped_image = Image.fromarray(cropped_object)
                     # cropped_image.save(f'cropped_image.jpg')
-                print('****STOP****')
+
             elif key & 0xFF == ord('q'):
                 break
 
