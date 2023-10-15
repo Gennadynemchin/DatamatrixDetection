@@ -78,8 +78,11 @@ class CodeDetection():
                                               min_edge=40,
                                               corrections=2,
                                               shape=DmtxSymbolSize.DmtxSymbol36x36,
-                                              max_count=1
+                                              max_count=1,
+                                              shrink=1,
+                                              deviation=10
                                               )
+
                     except ZeroDivisionError:
                         continue
                     cropped_image = Image.fromarray(cropped_object)
